@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from app.db.supabase import supabase
+from app.db.database import supabase
 
 router = APIRouter()
 
@@ -17,7 +17,7 @@ async def db_test():
     try:
         response = (
             supabase
-            .table("cutoffs")      # <-- Replace with your actual table name
+            .table("cutoffs")
             .select("*")
             .limit(1)
             .execute()
