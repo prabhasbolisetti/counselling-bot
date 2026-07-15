@@ -3,46 +3,52 @@ from pathlib import Path
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import FileResponse
 
+
 router = APIRouter(
     prefix="/pdf",
-    tags=["PDF"]
+    tags=["PDF"],
 )
 
 BASE_DIR = Path(__file__).resolve().parents[3]
 DATA_DIR = BASE_DIR / "data"
 
 
-@router.get("/cutoff")
-async def get_cutoff_pdf():
+def _get_pdf(file_name: str) -> Path:
+    """
+    Returns the PDF path.
+    Raises 404 if the file does not exist.
+    """
 
-    file_path = DATA_DIR / "category_cutoff.pdf"
+    file_path = DATA_DIR / file_name
 
     if not file_path.exists():
         raise HTTPException(
             status_code=404,
-            detail="Cutoff PDF not found."
+            detail=f"{file_name} not found.",
         )
+
+    return file_path
+
+
+@router.get("/cutoff")
+async def get_cutoff_pdf():
+
+    file_path = _get_pdf("category_cutoff.pdf")
 
     return FileResponse(
         path=file_path,
         media_type="application/pdf",
-        filename="category_cutoff.pdf"
+        filename="category_cutoff.pdf",
     )
 
 
 @router.get("/documents")
 async def get_documents_pdf():
 
-    file_path = DATA_DIR / "counselling_documents.pdf"
-
-    if not file_path.exists():
-        raise HTTPException(
-            status_code=404,
-            detail="Documents PDF not found."
-        )
+    file_path = _get_pdf("documents.pdf")
 
     return FileResponse(
         path=file_path,
         media_type="application/pdf",
-        filename="counselling_documents.pdf"
+        filename="documents.pdf",
     )
