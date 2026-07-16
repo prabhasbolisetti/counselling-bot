@@ -10,8 +10,7 @@ from app.services.whatsapp_service import (
 
 router = APIRouter(tags=["WhatsApp"])
 
-
-BASE_URL = "https://savior-renewal-quiet.ngrok-free.dev"
+BASE_URL = settings.PUBLIC_BASE_URL
 
 
 @router.get("/webhook")
@@ -35,38 +34,63 @@ async def verify_webhook(
 @router.post("/webhook")
 async def receive_message(request: Request):
 
-    payload = await request.json()
+    try:
+        payload = await request.json()
 
-    print("\n" + "=" * 70)
-    print("INCOMING PAYLOAD")
-    print("=" * 70)
-    print(payload)
-    print("=" * 70)
+    except Exception:
+        return {"status": "invalid_json"}
 
     try:
 
-        value = payload["entry"][0]["changes"][0]["value"]
+        value = (
+            payload
+            .get("entry", [{}])[0]
+            .get("changes", [{}])[0]
+            .get("value", {})
+        )
 
-        if "messages" not in value:
+        # Ignore delivery/read/status updates
+        if "statuses" in value:
             return {"status": "ignored"}
 
-        message = value["messages"][0]
+        messages = value.get("messages")
 
-        if message["type"] != "text":
+        if not messages:
             return {"status": "ignored"}
 
-        phone = message["from"]
-        text = message["text"]["body"]
+        message = messages[0]
 
-        print(f"Phone   : {phone}")
-        print(f"Message : {text}")
+        if message.get("type") != "text":
+            return {"status": "ignored"}
+
+        phone = message.get("from")
+
+        text = (
+            message
+            .get("text", {})
+            .get("body")
+        )
+
+        if not phone or not text:
+            return {"status": "ignored"}
+
+        text = text.strip()
+
+        if not text:
+            return {"status": "ignored"}
+
+        print("\n" + "=" * 70)
+        print("INCOMING MESSAGE")
+        print("=" * 70)
+        print("Phone   :", phone)
+        print("Message :", text)
 
         reply = await process_message(
             phone,
             text,
         )
 
-        print(f"Reply   : {reply}")
+        print("Reply   :", reply)
 
         if reply == "__SEND_CUTOFF_PDF__":
 
@@ -96,7 +120,11 @@ async def receive_message(request: Request):
 
     except Exception as e:
 
-        print("\nWEBHOOK ERROR")
+        print("\n" + "=" * 70)
+        print("WEBHOOK ERROR")
+        print("=" * 70)
+        print(type(e).__name__)
         print(e)
+        print("=" * 70)
 
     return {"status": "ok"}

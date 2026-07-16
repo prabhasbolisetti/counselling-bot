@@ -1,3 +1,5 @@
+import asyncio
+
 import httpx
 
 from app.core.config import settings
@@ -9,15 +11,75 @@ GRAPH_URL = (
     f"{settings.WHATSAPP_PHONE_NUMBER_ID}/messages"
 )
 
+HEADERS = {
+    "Authorization": f"Bearer {settings.WHATSAPP_ACCESS_TOKEN}",
+    "Content-Type": "application/json",
+}
+
+TIMEOUT = httpx.Timeout(20.0)
+
+MAX_RETRIES = 3
+
+
+async def _send(payload: dict):
+    """
+    Sends a request to the WhatsApp Cloud API.
+
+    Retries temporary failures before raising an exception.
+    """
+
+    last_error = None
+
+    for attempt in range(1, MAX_RETRIES + 1):
+
+        try:
+
+            async with httpx.AsyncClient(
+                timeout=TIMEOUT,
+            ) as client:
+
+                response = await client.post(
+                    GRAPH_URL,
+                    headers=HEADERS,
+                    json=payload,
+                )
+
+            print("\n" + "=" * 70)
+            print(f"META REQUEST (Attempt {attempt})")
+            print("=" * 70)
+            print("Status :", response.status_code)
+            print("Body   :", response.text)
+            print("=" * 70 + "\n")
+
+            if response.status_code < 500:
+                return response.json()
+
+        except (
+            httpx.TimeoutException,
+            httpx.ConnectError,
+            httpx.NetworkError,
+        ) as e:
+
+            last_error = e
+
+            print("\nNETWORK ERROR")
+            print(e)
+
+        if attempt < MAX_RETRIES:
+            await asyncio.sleep(attempt)
+
+    if last_error:
+        raise last_error
+
+    raise RuntimeError(
+        "Meta API request failed after retries."
+    )
+
 
 async def send_text_message(
     phone: str,
     message: str,
 ):
-    headers = {
-        "Authorization": f"Bearer {settings.WHATSAPP_ACCESS_TOKEN}",
-        "Content-Type": "application/json",
-    }
 
     payload = {
         "messaging_product": "whatsapp",
@@ -29,22 +91,7 @@ async def send_text_message(
         },
     }
 
-    async with httpx.AsyncClient(timeout=20) as client:
-
-        response = await client.post(
-            GRAPH_URL,
-            headers=headers,
-            json=payload,
-        )
-
-    print("\n" + "=" * 70)
-    print("META SEND MESSAGE")
-    print("=" * 70)
-    print("Status Code :", response.status_code)
-    print("Response    :", response.text)
-    print("=" * 70 + "\n")
-
-    return response.json()
+    return await _send(payload)
 
 
 async def send_document(
@@ -52,10 +99,6 @@ async def send_document(
     document_url: str,
     filename: str,
 ):
-    headers = {
-        "Authorization": f"Bearer {settings.WHATSAPP_ACCESS_TOKEN}",
-        "Content-Type": "application/json",
-    }
 
     payload = {
         "messaging_product": "whatsapp",
@@ -67,19 +110,4 @@ async def send_document(
         },
     }
 
-    async with httpx.AsyncClient(timeout=20) as client:
-
-        response = await client.post(
-            GRAPH_URL,
-            headers=headers,
-            json=payload,
-        )
-
-    print("\n" + "=" * 70)
-    print("META SEND DOCUMENT")
-    print("=" * 70)
-    print("Status Code :", response.status_code)
-    print("Response    :", response.text)
-    print("=" * 70 + "\n")
-
-    return response.json()
+    return await _send(payload)

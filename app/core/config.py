@@ -11,17 +11,18 @@ class Settings(BaseSettings):
     SUPABASE_ANON_KEY: str
 
     # WhatsApp Cloud API
-    WHATSAPP_ACCESS_TOKEN: str = ""
-    WHATSAPP_PHONE_NUMBER_ID: str = ""
-    WHATSAPP_BUSINESS_ACCOUNT_ID: str = ""
-    WHATSAPP_VERIFY_TOKEN: str = ""
+    WHATSAPP_ACCESS_TOKEN: str
+    WHATSAPP_PHONE_NUMBER_ID: str
+    WHATSAPP_BUSINESS_ACCOUNT_ID: str
+    WHATSAPP_VERIFY_TOKEN: str
+    PUBLIC_BASE_URL: str
 
     # Meta Graph API
     GRAPH_API_VERSION: str = "v25.0"
 
     model_config = SettingsConfigDict(
         env_file=".env",
-        extra="ignore"
+        extra="ignore",
     )
 
 

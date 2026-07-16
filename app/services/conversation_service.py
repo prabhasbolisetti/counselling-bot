@@ -2,6 +2,10 @@ from app.services.predictor_service import predict_colleges
 from app.services.session_service import get_session, reset_session
 
 
+MIN_RANK = 1
+MAX_RANK = 200000
+
+
 MENU = """
 👋 Welcome to AP EAPCET Counselling Bot
 
@@ -55,6 +59,7 @@ Select Preferred Branch
 17. BIO
 """
 
+
 CATEGORY_MAP = {
     "1": "oc",
     "2": "oc_ews",
@@ -67,10 +72,12 @@ CATEGORY_MAP = {
     "9": "st",
 }
 
+
 GENDER_MAP = {
     "1": "boys",
     "2": "girls",
 }
+
 
 BRANCH_MAP = {
     "1": "CSE",
@@ -93,17 +100,89 @@ BRANCH_MAP = {
 }
 
 
-async def process_message(phone: str, message: str):
+def _validate_rank(text: str):
+
+    text = text.strip()
+
+    if not text:
+        return (
+            False,
+            "❌ Rank cannot be empty.\n\nPlease enter your AP EAPCET Rank."
+        )
+
+    if not text.isdigit():
+
+        return (
+            False,
+            "❌ Invalid rank.\n\n"
+            "Please enter numbers only.\n\n"
+            "Example: 12345"
+        )
+
+    rank = int(text)
+
+    if rank < MIN_RANK:
+
+        return (
+            False,
+            f"❌ Invalid rank.\n\n"
+            f"Rank should be between {MIN_RANK} and {MAX_RANK}."
+        )
+
+    if rank > MAX_RANK:
+
+        return (
+            False,
+            f"❌ Invalid rank.\n\n"
+            f"Rank should be between {MIN_RANK} and {MAX_RANK}."
+        )
+
+    return True, rank
+
+
+def _validate_menu_choice(
+    text: str,
+    mapping: dict,
+    menu: str,
+    field: str,
+):
+
+    text = text.strip()
+
+    if text not in mapping:
+
+        return (
+            False,
+            f"❌ Invalid {field}.\n\n{menu}"
+        )
+
+    return (
+        True,
+        mapping[text],
+    )
+
+async def process_message(
+    phone: str,
+    message: str,
+):
 
     session = get_session(phone)
+
     text = message.strip().lower()
 
     # ------------------------
     # GLOBAL COMMANDS
     # ------------------------
 
-    if text in {"hi", "hello", "menu", "start"}:
+    if text in {
+        "hi",
+        "hello",
+        "menu",
+        "start",
+    }:
+
         reset_session(phone)
+
         return MENU
 
     state = session["state"]
@@ -115,16 +194,23 @@ async def process_message(phone: str, message: str):
     if state == "MAIN_MENU":
 
         if text == "1":
+
             session["state"] = "WAITING_RANK"
+
             return "Please enter your AP EAPCET Rank."
 
         if text == "2":
+
             return "__SEND_CUTOFF_PDF__"
 
         if text == "3":
+
             return "__SEND_DOCUMENTS_PDF__"
 
-        return MENU
+        return (
+            "❌ Invalid option.\n\n"
+            + MENU
+        )
 
     # ------------------------
     # WAITING RANK
@@ -132,10 +218,13 @@ async def process_message(phone: str, message: str):
 
     if state == "WAITING_RANK":
 
-        if not text.isdigit():
-            return "❌ Please enter a valid rank."
+        valid, value = _validate_rank(text)
 
-        session["rank"] = int(text)
+        if not valid:
+            return value
+
+        session["rank"] = value
+
         session["state"] = "WAITING_CATEGORY"
 
         return CATEGORY_MENU
@@ -146,10 +235,18 @@ async def process_message(phone: str, message: str):
 
     if state == "WAITING_CATEGORY":
 
-        if text not in CATEGORY_MAP:
-            return "❌ Invalid category.\n\n" + CATEGORY_MENU
+        valid, value = _validate_menu_choice(
+            text=text,
+            mapping=CATEGORY_MAP,
+            menu=CATEGORY_MENU,
+            field="category",
+        )
 
-        session["category"] = CATEGORY_MAP[text]
+        if not valid:
+            return value
+
+        session["category"] = value
+
         session["state"] = "WAITING_GENDER"
 
         return GENDER_MENU
@@ -160,10 +257,18 @@ async def process_message(phone: str, message: str):
 
     if state == "WAITING_GENDER":
 
-        if text not in GENDER_MAP:
-            return "❌ Invalid gender.\n\n" + GENDER_MENU
+        valid, value = _validate_menu_choice(
+            text=text,
+            mapping=GENDER_MAP,
+            menu=GENDER_MENU,
+            field="gender",
+        )
 
-        session["gender"] = GENDER_MAP[text]
+        if not valid:
+            return value
+
+        session["gender"] = value
+
         session["state"] = "WAITING_BRANCH"
 
         return BRANCH_MENU
@@ -174,23 +279,43 @@ async def process_message(phone: str, message: str):
 
     if state == "WAITING_BRANCH":
 
-        if text not in BRANCH_MAP:
-            return "❌ Invalid branch.\n\n" + BRANCH_MENU
-
-        session["branch"] = BRANCH_MAP[text]
-
-        colleges = await predict_colleges(
-            rank=session["rank"],
-            category=session["category"],
-            gender=session["gender"],
-            branch=session["branch"],
+        valid, value = _validate_menu_choice(
+            text=text,
+            mapping=BRANCH_MAP,
+            menu=BRANCH_MENU,
+            field="branch",
         )
 
-        if not colleges:
+        if not valid:
+            return value
+
+        session["branch"] = value
+
+        try:
+
+            colleges = await predict_colleges(
+                rank=session["rank"],
+                category=session["category"],
+                gender=session["gender"],
+                branch=session["branch"],
+            )
+
+        except Exception:
+
             reset_session(phone)
+
+            return (
+                "⚠️ Unable to process your request right now.\n\n"
+                "Please try again later."
+            )
+
+        if not colleges:
+
+            reset_session(phone)
+
             return (
                 "❌ No colleges found for your criteria.\n\n"
-                "Reply MENU to try again."
+                "Reply *MENU* to search again."
             )
 
         lines = []
@@ -209,7 +334,9 @@ async def process_message(phone: str, message: str):
 
             lines.append(f"{index}. *{college['college']}*")
             lines.append(f"   • {college['branch']}")
-            lines.append(f"   • Closing Rank: {college['closing_rank']}")
+            lines.append(
+                f"   • Closing Rank: {college['closing_rank']}"
+            )
             lines.append("")
 
         lines.append("━━━━━━━━━━━━━━━━━━")
@@ -221,8 +348,12 @@ async def process_message(phone: str, message: str):
         return "\n".join(lines)
 
     # ------------------------
-    # FALLBACK
+    # UNKNOWN STATE
     # ------------------------
 
     reset_session(phone)
-    return MENU
+
+    return (
+        "⚠️ Your previous session has expired or became invalid.\n\n"
+        + MENU
+    )
