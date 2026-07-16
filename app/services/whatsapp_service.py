@@ -111,3 +111,23 @@ async def send_document(
     }
 
     return await _send(payload)
+
+
+async def send_typing_indicator(
+    message_id: str,
+):
+    """
+    Shows WhatsApp typing indicator.
+    Also marks the incoming message as read.
+    """
+
+    payload = {
+        "messaging_product": "whatsapp",
+        "status": "read",
+        "message_id": message_id,
+        "typing_indicator": {
+            "type": "text",
+        },
+    }
+
+    return await _send(payload)

@@ -1,3 +1,6 @@
+import asyncio
+from time import time
+
 from fastapi import APIRouter, HTTPException, Query, Request
 from fastapi.responses import PlainTextResponse
 
@@ -6,11 +9,16 @@ from app.services.conversation_service import process_message
 from app.services.whatsapp_service import (
     send_document,
     send_text_message,
+    send_typing_indicator,
 )
 
 router = APIRouter(tags=["WhatsApp"])
 
 BASE_URL = settings.PUBLIC_BASE_URL
+
+# Processed WhatsApp message IDs
+PROCESSED_MESSAGES = {}
+MESSAGE_TTL = 300  # seconds
 
 
 @router.get("/webhook")
@@ -60,6 +68,35 @@ async def receive_message(request: Request):
 
         message = messages[0]
 
+        message_id = message.get("id")
+
+        if not message_id:
+            return {"status": "ignored"}
+
+        # Remove expired message IDs
+        current_time = time()
+
+        expired_ids = [
+            msg_id
+            for msg_id, ts in PROCESSED_MESSAGES.items()
+            if current_time - ts > MESSAGE_TTL
+        ]
+
+        for msg_id in expired_ids:
+            del PROCESSED_MESSAGES[msg_id]
+
+        # Ignore duplicate webhook deliveries
+        if message_id in PROCESSED_MESSAGES:
+            print("\n" + "=" * 70)
+            print("DUPLICATE MESSAGE IGNORED")
+            print("=" * 70)
+            print(f"Message ID: {message_id}")
+            print("=" * 70)
+
+            return {"status": "duplicate"}
+
+        PROCESSED_MESSAGES[message_id] = current_time
+
         if message.get("type") != "text":
             return {"status": "ignored"}
 
@@ -82,8 +119,14 @@ async def receive_message(request: Request):
         print("\n" + "=" * 70)
         print("INCOMING MESSAGE")
         print("=" * 70)
-        print("Phone   :", phone)
-        print("Message :", text)
+        print("Phone      :", phone)
+        print("Message ID :", message_id)
+        print("Message    :", text)
+
+        # Show typing indicator immediately
+        await send_typing_indicator(message_id)
+
+        await asyncio.sleep(1.5)
 
         reply = await process_message(
             phone,
