@@ -8,6 +8,7 @@ from app.core.config import settings
 from app.services.conversation_service import process_message
 from app.services.session_service import reset_session
 from app.services.whatsapp_service import (
+    send_cta_button,
     send_main_menu,
     send_text_message,
     send_typing_indicator,
@@ -169,10 +170,29 @@ async def receive_message(request: Request):
 
         print("Reply   :", reply)
 
-        result = await send_text_message(
-            phone,
-            reply,
-        )
+        # ------------------------
+        # CTA BUTTON REPLIES (Cutoff PDF / Documents)
+        # ------------------------
+
+        if isinstance(reply, dict) and reply.get("type") == "cta_url":
+
+            result = await send_cta_button(
+                phone=phone,
+                body_text=reply["body"],
+                button_text=reply["button_text"],
+                url=reply["url"],
+            )
+
+        # ------------------------
+        # PLAIN TEXT REPLIES (menus, errors, predictor results)
+        # ------------------------
+
+        else:
+
+            result = await send_text_message(
+                phone,
+                reply,
+            )
 
         print("\nSEND RESULT")
         print(result)

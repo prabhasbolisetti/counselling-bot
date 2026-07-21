@@ -155,6 +155,41 @@ async def send_main_menu(phone: str):
     return await _send(payload)
 
 
+async def send_cta_button(
+    phone: str,
+    body_text: str,
+    button_text: str,
+    url: str,
+):
+    """
+    Sends a WhatsApp interactive Call-To-Action (CTA) URL button.
+
+    Tapping the button opens `url` directly in the user's browser,
+    instead of showing the raw link as plain text.
+    """
+
+    payload = {
+        "messaging_product": "whatsapp",
+        "to": phone,
+        "type": "interactive",
+        "interactive": {
+            "type": "cta_url",
+            "body": {
+                "text": body_text,
+            },
+            "action": {
+                "name": "cta_url",
+                "parameters": {
+                    "display_text": button_text,
+                    "url": url,
+                },
+            },
+        },
+    }
+
+    return await _send(payload)
+
+
 async def send_typing_indicator(
     message_id: str,
 ):

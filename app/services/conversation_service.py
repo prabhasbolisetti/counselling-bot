@@ -100,6 +100,35 @@ BRANCH_MAP = {
 }
 
 
+# ------------------------------------------------------------------
+# Cutoff PDF / Documents CTA button definitions
+#
+# These are returned as dicts (not plain strings) so that webhook.py
+# knows to send them as a WhatsApp CTA URL button instead of a plain
+# text message with the raw link pasted in.
+# ------------------------------------------------------------------
+
+CUTOFF_CTA = {
+    "type": "cta_url",
+    "body": (
+        "📄 *AP EAPCET Category-wise Cutoff PDF*\n\n"
+        "Tap the button below to view it."
+    ),
+    "button_text": "📄 View Cutoff PDF",
+    "url": "https://drive.google.com/file/d/1pleb5J0VRxLLyWEW4OuNMTwY1AWosaOi/view?usp=sharing",
+}
+
+DOCUMENTS_CTA = {
+    "type": "cta_url",
+    "body": (
+        "📑 *AP EAPCET Counselling Documents*\n\n"
+        "Tap the button below to view them."
+    ),
+    "button_text": "📑 View Documents",
+    "url": "https://drive.google.com/file/d/16Oy9Je2pSTdFlE5mfsHVPzviOEkc40l-/view?usp=drivesdk",
+}
+
+
 def _validate_rank(text: str):
 
     text = text.strip()
@@ -201,21 +230,11 @@ async def process_message(
 
         if text in {"2", "cutoff"}:
 
-            return (
-                "📄 *AP EAPCET Category-wise Cutoff PDF*\n\n"
-                "Download here:\n"
-                "https://drive.google.com/file/d/1pleb5J0VRxLLyWEW4OuNMTwY1AWosaOi/view?usp=sharing\n\n"
-                "Reply *MENU* to return to the main menu."
-            )
+            return CUTOFF_CTA
 
         if text in {"3", "documents"}:
 
-            return (
-                "📑 *AP EAPCET Counselling Documents*\n\n"
-                "Download here:\n"
-                "https://drive.google.com/file/d/16Oy9Je2pSTdFlE5mfsHVPzviOEkc40l-/view?usp=drivesdk\n\n"
-                "Reply *MENU* to return to the main menu."
-            )
+            return DOCUMENTS_CTA
 
         return (
             "❌ Invalid option.\n\n"
