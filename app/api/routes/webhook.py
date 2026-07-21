@@ -7,14 +7,11 @@ from fastapi.responses import PlainTextResponse
 from app.core.config import settings
 from app.services.conversation_service import process_message
 from app.services.whatsapp_service import (
-    send_document,
     send_text_message,
     send_typing_indicator,
 )
 
 router = APIRouter(tags=["WhatsApp"])
-
-BASE_URL = settings.PUBLIC_BASE_URL
 
 # Processed WhatsApp message IDs
 PROCESSED_MESSAGES = {}
@@ -135,28 +132,10 @@ async def receive_message(request: Request):
 
         print("Reply   :", reply)
 
-        if reply == "__SEND_CUTOFF_PDF__":
-
-            result = await send_document(
-                phone=phone,
-                document_url=f"{BASE_URL}/pdf/cutoff",
-                filename="category_cutoff.pdf",
-            )
-
-        elif reply == "__SEND_DOCUMENTS_PDF__":
-
-            result = await send_document(
-                phone=phone,
-                document_url=f"{BASE_URL}/pdf/documents",
-                filename="documents.pdf",
-            )
-
-        else:
-
-            result = await send_text_message(
-                phone,
-                reply,
-            )
+        result = await send_text_message(
+            phone,
+            reply,
+        )
 
         print("\nSEND RESULT")
         print(result)

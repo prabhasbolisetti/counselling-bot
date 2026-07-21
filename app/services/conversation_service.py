@@ -201,11 +201,21 @@ async def process_message(
 
         if text == "2":
 
-            return "__SEND_CUTOFF_PDF__"
+            return (
+                "📄 *AP EAPCET Category-wise Cutoff PDF*\n\n"
+                "Download here:\n"
+                "https://drive.google.com/file/d/1pleb5J0VRxLLyWEW4OuNMTwY1AWosaOi/view?usp=sharing\n\n"
+                "Reply *MENU* to return to the main menu."
+            )
 
         if text == "3":
 
-            return "__SEND_DOCUMENTS_PDF__"
+            return (
+                "📑 *AP EAPCET Counselling Documents*\n\n"
+                "Download here:\n"
+                "https://drive.google.com/file/d/16Oy9Je2pSTdFlE5mfsHVPzviOEkc40l-/view?usp=drivesdk\n\n"
+                "Reply *MENU* to return to the main menu."
+            )
 
         return (
             "❌ Invalid option.\n\n"
