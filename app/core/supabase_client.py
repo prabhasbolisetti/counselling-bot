@@ -16,5 +16,5 @@ from app.core.config import settings
 
 supabase: Client = create_client(
     settings.SUPABASE_URL,
-    settings.SUPABASE_KEY,
+    settings.SUPABASE_ANON_KEY,
 )
