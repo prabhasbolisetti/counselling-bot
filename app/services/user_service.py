@@ -5,31 +5,37 @@ from app.core.supabase_client import supabase
 
 
 def _insert_if_new(phone: str, now: str):
-    """
-    Blocking Supabase calls, run inside a worker thread by
-    save_user_if_new().
-
-    - If the phone number already exists -> do nothing.
-    - If it doesn't -> insert a single row with first_seen.
-    """
+    print("=" * 60)
+    print("PHONE:", phone)
 
     existing = (
         supabase
         .table("users")
-        .select("phone")
+        .select("*")
         .eq("phone", phone)
         .execute()
     )
 
+    print("EXISTING:", existing.data)
+
     if existing.data:
+        print("User already exists")
         return
 
-    supabase.table("users").insert(
-        {
-            "phone": phone,
-            "first_seen": now,
-        }
-    ).execute()
+    result = (
+        supabase
+        .table("users")
+        .insert(
+            {
+                "phone": phone,
+                "first_seen": now,
+            }
+        )
+        .execute()
+    )
+
+    print("INSERT RESULT:", result.data)
+    print("=" * 60)
 
 
 async def save_user_if_new(phone: str):
