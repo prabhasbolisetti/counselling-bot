@@ -113,6 +113,48 @@ async def send_document(
     return await _send(payload)
 
 
+async def send_main_menu(phone: str):
+
+    payload = {
+        "messaging_product": "whatsapp",
+        "to": phone,
+        "type": "interactive",
+        "interactive": {
+            "type": "button",
+            "body": {
+                "text": "👋 Welcome to AP EAPCET Counselling Bot\n\nChoose an option:"
+            },
+            "action": {
+                "buttons": [
+                    {
+                        "type": "reply",
+                        "reply": {
+                            "id": "predictor",
+                            "title": "🎯 Predictor",
+                        },
+                    },
+                    {
+                        "type": "reply",
+                        "reply": {
+                            "id": "cutoff",
+                            "title": "📄 Cutoff PDF",
+                        },
+                    },
+                    {
+                        "type": "reply",
+                        "reply": {
+                            "id": "documents",
+                            "title": "📑 Documents",
+                        },
+                    },
+                ]
+            },
+        },
+    }
+
+    return await _send(payload)
+
+
 async def send_typing_indicator(
     message_id: str,
 ):

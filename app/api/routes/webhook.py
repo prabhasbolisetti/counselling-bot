@@ -6,7 +6,9 @@ from fastapi.responses import PlainTextResponse
 
 from app.core.config import settings
 from app.services.conversation_service import process_message
+from app.services.session_service import reset_session
 from app.services.whatsapp_service import (
+    send_main_menu,
     send_text_message,
     send_typing_indicator,
 )
@@ -16,6 +18,8 @@ router = APIRouter(tags=["WhatsApp"])
 # Processed WhatsApp message IDs
 PROCESSED_MESSAGES = {}
 MESSAGE_TTL = 300  # seconds
+
+GREETINGS = {"hi", "hello", "menu", "start"}
 
 
 @router.get("/webhook")
@@ -94,16 +98,34 @@ async def receive_message(request: Request):
 
         PROCESSED_MESSAGES[message_id] = current_time
 
-        if message.get("type") != "text":
-            return {"status": "ignored"}
-
         phone = message.get("from")
 
-        text = (
-            message
-            .get("text", {})
-            .get("body")
-        )
+        msg_type = message.get("type")
+
+        # ------------------------
+        # BUTTON REPLIES
+        # ------------------------
+
+        if msg_type == "interactive":
+
+            interactive = message.get("interactive", {})
+
+            if interactive.get("type") == "button_reply":
+                text = interactive.get("button_reply", {}).get("id")
+
+            else:
+                return {"status": "ignored"}
+
+        # ------------------------
+        # TEXT MESSAGES
+        # ------------------------
+
+        elif msg_type == "text":
+
+            text = message.get("text", {}).get("body")
+
+        else:
+            return {"status": "ignored"}
 
         if not phone or not text:
             return {"status": "ignored"}
@@ -124,6 +146,21 @@ async def receive_message(request: Request):
         await send_typing_indicator(message_id)
 
         await asyncio.sleep(1.5)
+
+        # ------------------------
+        # GREETING -> INTERACTIVE MENU
+        # ------------------------
+
+        if text.lower() in GREETINGS:
+
+            reset_session(phone)
+
+            result = await send_main_menu(phone)
+
+            print("\nSEND RESULT")
+            print(result)
+
+            return {"status": "ok"}
 
         reply = await process_message(
             phone,

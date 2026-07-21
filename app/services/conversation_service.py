@@ -193,13 +193,13 @@ async def process_message(
 
     if state == "MAIN_MENU":
 
-        if text == "1":
+        if text in {"1", "predictor"}:
 
             session["state"] = "WAITING_RANK"
 
             return "Please enter your AP EAPCET Rank."
 
-        if text == "2":
+        if text in {"2", "cutoff"}:
 
             return (
                 "📄 *AP EAPCET Category-wise Cutoff PDF*\n\n"
@@ -208,7 +208,7 @@ async def process_message(
                 "Reply *MENU* to return to the main menu."
             )
 
-        if text == "3":
+        if text in {"3", "documents"}:
 
             return (
                 "📑 *AP EAPCET Counselling Documents*\n\n"
