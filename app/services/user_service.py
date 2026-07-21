@@ -4,51 +4,41 @@ from datetime import datetime, timezone
 from app.core.supabase_client import supabase
 
 
-def _upsert_user(phone: str, now: str):
+def _insert_if_new(phone: str, now: str):
     """
-    Blocking Supabase calls, run inside a worker thread by save_user().
+    Blocking Supabase calls, run inside a worker thread by
+    save_user_if_new().
 
-    - If the phone number doesn't exist -> insert a new row.
-    - If it exists -> update last_seen and increment message_count.
+    - If the phone number already exists -> do nothing.
+    - If it doesn't -> insert a single row with first_seen.
     """
 
     existing = (
         supabase
         .table("users")
-        .select("phone, message_count")
+        .select("phone")
         .eq("phone", phone)
         .execute()
     )
 
     if existing.data:
+        return
 
-        current_count = existing.data[0].get("message_count", 0) or 0
-
-        supabase.table("users").update(
-            {
-                "last_seen": now,
-                "message_count": current_count + 1,
-            }
-        ).eq("phone", phone).execute()
-
-    else:
-
-        supabase.table("users").insert(
-            {
-                "phone": phone,
-                "first_seen": now,
-                "last_seen": now,
-                "message_count": 1,
-            }
-        ).execute()
+    supabase.table("users").insert(
+        {
+            "phone": phone,
+            "first_seen": now,
+        }
+    ).execute()
 
 
-async def save_user(phone: str):
+async def save_user_if_new(phone: str):
     """
-    Records that `phone` used the bot.
+    Records `phone` in the users table exactly once.
 
-    Inserts a new row for a first-time phone number, or updates
-    last_seen and increments message_count for a returning one.
+    Call this only when a user starts/restarts a conversation (e.g.
+    on "hi"/"hello"/"start"), not on every message - so one user ends
+    up with exactly one row no matter how many messages they send.
 
     The actual Supabase client calls are synchronous, so they're run
     in a worker thread via asyncio.to_thread to avoid blocking the
@@ -60,7 +50,7 @@ async def save_user(phone: str):
 
     try:
 
-        await asyncio.to_thread(_upsert_user, phone, now)
+        await asyncio.to_thread(_insert_if_new, phone, now)
 
     except Exception as e:
 
