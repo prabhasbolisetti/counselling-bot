@@ -7,6 +7,7 @@ from fastapi.responses import PlainTextResponse
 from app.core.config import settings
 from app.services.conversation_service import process_message
 from app.services.session_service import reset_session
+from app.services.user_service import save_user
 from app.services.whatsapp_service import (
     send_cta_button,
     send_main_menu,
@@ -135,6 +136,10 @@ async def receive_message(request: Request):
 
         if not text:
             return {"status": "ignored"}
+
+        # Record/update this phone number in Supabase before we do
+        # anything else with the message.
+        await save_user(phone)
 
         print("\n" + "=" * 70)
         print("INCOMING MESSAGE")
