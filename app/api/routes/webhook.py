@@ -137,6 +137,9 @@ async def receive_message(request: Request):
         if not text:
             return {"status": "ignored"}
 
+        # Save every new user once, regardless of what they sent
+        await save_user_if_new(phone)
+
         print("\n" + "=" * 70)
         print("INCOMING MESSAGE")
         print("=" * 70)
@@ -154,8 +157,6 @@ async def receive_message(request: Request):
         # ------------------------
 
         if text.lower() in GREETINGS:
-
-            await save_user_if_new(phone)
 
             reset_session(phone)
 
